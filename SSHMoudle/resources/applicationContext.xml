@@ -1,0 +1,122 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context-3.2.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop-3.2.xsd">
+
+    <!-- 数据源-->
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="com.mysql.jdbc.Driver"></property>
+        <property name="url" value="jdbc:mysql://localhost:3306/test"></property>
+        <property name="username" value="root"></property>
+        <property name="password" value="1234"></property>
+    </bean>
+
+    <!-- 生成sessionFactory-->
+    <bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+        <!-- 数据源-->
+        <property name="dataSource" ref="dataSource"></property>
+
+        <!-- hibernate配置-->
+        <property name="hibernateProperties">
+            <props>
+                <!-- 方言-->
+                <prop key="hibernate.dialect">org.hibernate.dialect.MySQL5Dialect</prop>
+                <prop key="hibernate.show_sql">true</prop>
+                <prop key="hibernate.format_sql">true</prop>
+                <prop key="javax.persistence.validation.mode">none</prop>
+            </props>
+        </property>
+
+        <!--mapping映射文件 -->
+        <property name="mappingResources">
+            <list>
+                <value>mapping/studenttb.hbm.xml</value>
+            </list>
+        </property>
+    </bean>
+
+
+    <!-- dao-->
+    <bean id="studenttbDao" class="com.zk.dao.StudenttbDaoImpl">
+        <property name="sessionFactory" ref="sessionFactory"></property>
+    </bean>
+
+    <bean id="testDao" class="com.zk.dao.TestDaoImpl">
+        <property name="sessionFactory" ref="sessionFactory"></property>
+    </bean>
+
+    <!-- service-->
+    <bean id="studentService" class="com.zk.service.StudentServiceImpl">
+        <property name="studenttbDao" ref="studenttbDao"></property>
+    </bean>
+
+
+    <!-- logAdvice1（切面） 织入 StudentServicImp（目标对象）:
+                              saveServiceStudent（切点） 前面-->
+
+    <!-- 初始化切面logAdvice1-->
+    <!-- 指定了切入时机-->
+    <bean id="logAdvice1" class="com.zk.advice.LogAdvice1"></bean>
+    <!-- 没有指定切入时机 -->
+    <bean id="logAdvice2" class="com.zk.advice.LogAdvice2"></bean>
+   <!-- &lt;!&ndash; StudentServiceImp 代理对象&ndash;&gt;
+    <bean  id="studentServiceProxy" class="org.springframework.aop.framework.ProxyFactoryBean">
+            <property name="proxyInterfaces" value="com.zk.service.StudentService"></property>
+            <property name="target" ref="studentService"></property>
+            <property name="interceptorNames">
+                <list>
+                    <value>logAdvice1</value>
+                </list>
+            </property>
+    </bean>-->
+
+ <!--   aop:advisor   切面指定了切入时机       实现 接口
+    aop:aspect    切面不需要指定且入时机   任意的类
+    区别-->
+
+    <!-- aop 配置-->
+    <aop:config>
+        <!-- 切点信息-->
+        <!--返回值 包名.类名.方法名(参数)-->
+        <aop:pointcut id="pointcut1" expression="execution(* com.zk.service.*.*(..))"></aop:pointcut>
+        <!-- advice 织入到那个切点上-->
+        <aop:advisor advice-ref="logAdvice1" pointcut-ref="pointcut1"></aop:advisor>
+    </aop:config>
+
+    <aop:config>
+        <aop:pointcut id="pointcut1" expression="execution(* com.zk.service.*.*(..))"></aop:pointcut>
+        <aop:aspect id="logAdvice2" ref="logAdvice2">
+                <aop:before method="before" pointcut-ref="pointcut1"></aop:before>
+                <aop:after method="after" pointcut-ref="pointcut1"></aop:after>
+        </aop:aspect>
+    </aop:config>
+
+
+
+
+
+
+
+    <!-- controller-->
+    <bean id="studentController" class="com.zk.controller.StudentController">
+        <property name="studentService" ref="studentService"></property>
+    </bean>
+
+
+
+
+
+
+
+
+
+
+
+
+</beans>
